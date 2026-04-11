@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Trading Concierge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-area">
+      <h1>Dashboard <span>Trading Concierge</span></h1>
+      <p id="refresh-status">Caricamento...</p>
+    </div>
+    <div class="header-right">
+      <div class="live-badge" id="live-badge"><div class="live-dot" id="live-dot"></div> <span id="live-label">LIVE</span></div>
+      <button class="refresh-btn" onclick="forceRefresh()">&#8635; Aggiorna ora</button>
+    </div>
+  </header>
+
+  <!-- KPI Strip -->
+  <div id="kpi-grid" class="kpi-grid">
+    <div class="kpi-card skeleton-card"><div class="skeleton"></div><div class="skeleton" style="width:60%;height:2rem;margin-top:.5rem"></div></div>
+    <div class="kpi-card skeleton-card"><div class="skeleton"></div><div class="skeleton" style="width:60%;height:2rem;margin-top:.5rem"></div></div>
+    <div class="kpi-card skeleton-card"><div class="skeleton"></div><div class="skeleton" style="width:60%;height:2rem;margin-top:.5rem"></div></div>
+  </div>
+
+  <!-- Trend -->
+  <div class="card trend-card">
+    <div class="card-title">
+      <span id="trend-title">Trend Soddisfazione</span>
+      <div class="trend-controls">
+        <button class="trend-btn active" data-mode="weekly" onclick="setTrendMode('weekly')">Settimana</button>
+        <button class="trend-btn" data-mode="monthly" onclick="setTrendMode('monthly')">Mese</button>
+        <button class="trend-btn" data-mode="custom" onclick="setTrendMode('custom')">Personalizzato</button>
+        <div class="trend-dates" id="trend-dates" style="display:none">
+          <input type="date" id="trend-from">
+          <span>-</span>
+          <input type="date" id="trend-to">
+          <button class="trend-btn" onclick="applyCustomRange()">Applica</button>
+        </div>
+      </div>
+    </div>
+    <canvas id="trend-chart" height="240"></canvas>
+  </div>
+
+  <!-- Metrics Row -->
+  <div class="metrics-row">
+    <div class="card">
+      <div class="card-title">Metriche di qualita</div>
+      <div id="bars-container"><div class="skeleton"></div><div class="skeleton" style="margin-top:.7rem"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Distribuzione voti</div>
+      <div id="dist-container"><div class="skeleton" style="width:80%"></div></div>
+    </div>
+  </div>
+
+  <!-- Low Score Alerts -->
+  <div class="card alerts-card" id="alerts-card" style="display:none">
+    <div class="card-title">
+      <span>Segnalazioni critiche (Soddisfazione &lt; 6)</span>
+      <span id="alerts-count" class="alert-badge"></span>
+    </div>
+    <div id="alerts-list"></div>
+  </div>
+
+  <!-- Comments -->
+  <div class="card comments-card">
+    <div class="card-title">
+      <span>Commenti recenti</span>
+      <span id="comments-count" style="color:var(--accent)"></span>
+    </div>
+    <div id="comments-list">
+      <div class="skeleton"></div><div class="skeleton" style="margin-top:.7rem"></div><div class="skeleton" style="margin-top:.7rem"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="dashboard.js"></script>
+</body>
+</html>
