@@ -16,7 +16,7 @@ const CALENDLY_CACHE_TTL = 60 * 60 * 1000;
 async function calendlyFetch(path) {
   const url = path.startsWith('http') ? path : `${CALENDLY_BASE}${path}`;
   const r = await fetch(url, {
-    headers: { Authorization: `Bearer ${CALENDLY_TOKEN}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${CALENDLY_TOKEN}` },
     signal: AbortSignal.timeout(15000),
   });
   if (!r.ok) {
