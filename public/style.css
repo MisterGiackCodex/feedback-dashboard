@@ -101,11 +101,12 @@ header {
 /* ── KPI Grid ── */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
-@media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
 
 .kpi-card {
   background: var(--surface);
@@ -414,6 +415,17 @@ header {
   padding: 1rem;
 }
 
+/* ── NPS Breakdown ── */
+.nps-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  margin-top: 0.4rem;
+}
+.nps-promo { font-size: 0.68rem; color: var(--success); font-family: 'Roboto Mono', monospace; }
+.nps-pass  { font-size: 0.68rem; color: var(--muted);   font-family: 'Roboto Mono', monospace; }
+.nps-detr  { font-size: 0.68rem; color: var(--danger);  font-family: 'Roboto Mono', monospace; }
+
 /* ── Period Comparison Deltas ── */
 .delta-up { color: var(--success); }
 .delta-down { color: var(--danger); }
@@ -427,6 +439,7 @@ header {
 .kpi-grid .kpi-card:nth-child(1) { animation-delay: 0.05s; }
 .kpi-grid .kpi-card:nth-child(2) { animation-delay: 0.10s; }
 .kpi-grid .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+.kpi-grid .kpi-card:nth-child(4) { animation-delay: 0.20s; }
 .trend-card { animation-delay: 0.20s; }
 .metrics-row .card:nth-child(1) { animation-delay: 0.25s; }
 .metrics-row .card:nth-child(2) { animation-delay: 0.30s; }

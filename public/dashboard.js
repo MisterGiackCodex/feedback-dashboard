@@ -502,7 +502,12 @@ function renderKPI(rows) {
   // NPS
   const promotori = dataRows.filter(r => parseFloat(r[COL.soddisfazione]) >= 9).length;
   const detrattori = dataRows.filter(r => parseFloat(r[COL.soddisfazione]) <= 6).length;
+  const passivi = total - promotori - detrattori;
   const nps = total ? Math.round(((promotori - detrattori) / total) * 100) : 0;
+  const pctPromo = total ? Math.round((promotori / total) * 100) : 0;
+  const pctPass  = total ? Math.round((passivi   / total) * 100) : 0;
+  const pctDetr  = total ? Math.round((detrattori / total) * 100) : 0;
+  const npsColor = nps >= 50 ? 'var(--success)' : nps >= 0 ? 'var(--accent)' : 'var(--danger)';
 
   const now = Date.now();
   const week = dataRows.filter(r => (now - parseTs(r[COL.data])) < 7 * 86400000).length;
@@ -576,6 +581,18 @@ function renderKPI(rows) {
           <div class="kpi-label">Soddisfazione media</div>
           <div class="kpi-value" style="color:${metricColor(avgSodd, BENCHMARKS.soddisfazione)}">${avgSodd.toFixed(1)}<span style="font-size:0.9rem;font-weight:400;color:var(--muted)">/10</span></div>
           <div class="kpi-sub">${deltaHtml(soddDelta)}</div>
+        </div>`
+    },
+    {
+      html: `
+        <div class="kpi-card" style="--accent-color:${npsColor}">
+          <div class="kpi-label">NPS Score</div>
+          <div class="kpi-value" style="color:${npsColor}">${nps > 0 ? '+' : ''}${nps}</div>
+          <div class="nps-breakdown">
+            <span class="nps-promo">&#9650; ${pctPromo}% promotori (9-10)</span>
+            <span class="nps-pass">&#9644; ${pctPass}% passivi (7-8)</span>
+            <span class="nps-detr">&#9660; ${pctDetr}% detrattori (0-6)</span>
+          </div>
         </div>`
     },
   ];
