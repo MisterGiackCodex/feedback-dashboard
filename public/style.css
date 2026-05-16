@@ -444,6 +444,23 @@ header {
 .metrics-row .card:nth-child(1) { animation-delay: 0.25s; }
 .metrics-row .card:nth-child(2) { animation-delay: 0.30s; }
 
+/* ── Calendly Section ── */
+.calendly-card { margin-bottom: 1.5rem; }
+.calendly-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+.calendly-chart-wrap canvas { width: 100% !important; }
+@media (max-width: 768px) { .calendly-body { grid-template-columns: 1fr; } }
+.calendly-total {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-family: 'Roboto Mono', monospace;
+  margin-top: 0.8rem;
+}
+
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }

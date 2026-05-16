@@ -2,6 +2,11 @@
 const DATA_URL = '/api/data';
 const AI_SUMMARY_URL = '/api/summary';
 const AI_INSIGHTS_URL = '/api/insights';
+const CALENDLY_URL = '/api/calendly';
+
+let _calendlyMode = 'weekly';
+let _calendlyCustomFrom = null;
+let _calendlyCustomTo = null;
 
 // ── Cache & Refresh ────────────────────────────────────────────────────────
 const REFRESH_INTERVAL = 12 * 60 * 60 * 1000; // 12 ore
@@ -976,6 +981,105 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeInsightsModal();
 });
 
+// ── Calendly ───────────────────────────────────────────────────────────────
+
+function setCalendlyMode(mode) {
+  _calendlyMode = mode;
+  document.querySelectorAll('.trend-btn[data-cmode]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cmode === mode);
+  });
+  const datesEl = document.getElementById('calendly-dates');
+  if (mode === 'custom') {
+    datesEl.style.display = 'flex';
+  } else {
+    datesEl.style.display = 'none';
+    _calendlyCustomFrom = null;
+    _calendlyCustomTo = null;
+    loadCalendly(mode);
+  }
+}
+
+function applyCalendlyRange() {
+  const from = document.getElementById('calendly-from').value;
+  const to = document.getElementById('calendly-to').value;
+  _calendlyCustomFrom = from || null;
+  _calendlyCustomTo = to || null;
+  loadCalendly('custom', _calendlyCustomFrom, _calendlyCustomTo);
+}
+
+async function loadCalendly(mode, from, to, force) {
+  mode = mode || _calendlyMode;
+
+  const breakdown = document.getElementById('calendly-breakdown');
+  const canvas = document.getElementById('calendly-chart');
+  if (!breakdown || !canvas) return;
+
+  breakdown.innerHTML = '<div class="skeleton"></div><div class="skeleton" style="margin-top:.7rem"></div>';
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const titleEl = document.getElementById('calendly-title');
+  if (mode === 'monthly') titleEl.textContent = 'Riunioni Calendly (mensile)';
+  else if (mode === 'custom') titleEl.textContent = 'Riunioni Calendly (periodo personalizzato)';
+  else titleEl.textContent = 'Riunioni Calendly (settimanale)';
+
+  let url = `${CALENDLY_URL}?mode=${mode}`;
+  if (from) url += `&from=${from}`;
+  if (to) url += `&to=${to}`;
+  if (force) url += '&force=1';
+
+  try {
+    const resp = await fetch(url, { cache: 'no-store' });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      renderCalendlyError(err.error || `Errore ${resp.status}`);
+      return;
+    }
+    const data = await resp.json();
+    renderCalendly(data);
+  } catch (err) {
+    renderCalendlyError('Errore caricamento dati Calendly');
+  }
+}
+
+function renderCalendlyError(msg) {
+  document.getElementById('calendly-breakdown').innerHTML = `<div class="no-data">${msg}</div>`;
+  const canvas = document.getElementById('calendly-chart');
+  if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function renderCalendly(data) {
+  if (data.periods && data.periods.length) {
+    requestAnimationFrame(() => drawVolumeChart('calendly-chart', data.periods));
+  } else {
+    const canvas = document.getElementById('calendly-chart');
+    if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  }
+  renderCalendlyBreakdown(data.byType || [], data.total || 0);
+}
+
+function renderCalendlyBreakdown(byType, total) {
+  const container = document.getElementById('calendly-breakdown');
+  if (!byType.length) {
+    container.innerHTML = '<div class="no-data">Nessuna riunione in questo periodo</div>';
+    return;
+  }
+  const maxCount = byType[0].count;
+  container.innerHTML = byType.map(t => {
+    const pct = (t.count / maxCount) * 100;
+    return `
+      <div class="bar-group">
+        <div class="bar-label">
+          <span>${t.name}</span>
+          <span style="color:var(--accent)">${t.count}</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,#7c3aed,var(--accent))"></div>
+        </div>
+      </div>`;
+  }).join('') + `<div class="calendly-total">Totale: ${total} riunioni</div>`;
+}
+
 // ── Render All ─────────────────────────────────────────────────────────────
 function renderSheet(rows) {
   _currentRows = rows;
@@ -985,6 +1089,7 @@ function renderSheet(rows) {
   renderAlerts(rows);
   renderComments(rows);
   refreshTrend();
+  loadCalendly('weekly');
 }
 
 // ── Load Data via backend proxy (fresh fetch) ──────────────────────────────
@@ -1048,6 +1153,7 @@ function forceRefresh() {
   localStorage.removeItem(CACHE_KEY);
   localStorage.removeItem(CACHE_TS_KEY);
   loadDataFresh(true);
+  loadCalendly(_calendlyMode, _calendlyCustomFrom, _calendlyCustomTo, true);
 }
 
 // ── Refresh Status Display ────────────────────────────────────────────────

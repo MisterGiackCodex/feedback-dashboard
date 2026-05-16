@@ -51,6 +51,34 @@
     <canvas id="trend-chart" height="240"></canvas>
   </div>
 
+  <!-- Calendly Meetings -->
+  <div class="card calendly-card">
+    <div class="card-title">
+      <span id="calendly-title">Riunioni Calendly</span>
+      <div class="trend-controls">
+        <button class="trend-btn active" data-cmode="weekly" onclick="setCalendlyMode('weekly')">Settimana</button>
+        <button class="trend-btn" data-cmode="monthly" onclick="setCalendlyMode('monthly')">Mese</button>
+        <button class="trend-btn" data-cmode="custom" onclick="setCalendlyMode('custom')">Personalizzato</button>
+        <div class="trend-dates" id="calendly-dates" style="display:none">
+          <input type="date" id="calendly-from">
+          <span>-</span>
+          <input type="date" id="calendly-to">
+          <button class="trend-btn" onclick="applyCalendlyRange()">Applica</button>
+        </div>
+      </div>
+    </div>
+    <div class="calendly-body">
+      <div class="calendly-chart-wrap">
+        <canvas id="calendly-chart" height="200"></canvas>
+      </div>
+      <div id="calendly-breakdown">
+        <div class="skeleton"></div>
+        <div class="skeleton" style="margin-top:.7rem"></div>
+        <div class="skeleton" style="margin-top:.7rem;width:70%"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Metrics Row -->
   <div class="metrics-row">
     <div class="card">

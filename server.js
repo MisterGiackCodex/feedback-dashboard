@@ -7,6 +7,87 @@ const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const SCRIPT_URL = process.env.SCRIPT_URL
   || 'https://script.google.com/macros/s/AKfycbyljYap0vjqm6lkVPYXq6ORlGuQgOgjsVIl0MUcAAkubK40Q5CH6GhTRnWvkxmYHeSf/exec';
 
+const CALENDLY_TOKEN = process.env.CALENDLY_TOKEN || '';
+const CALENDLY_BASE = 'https://api.calendly.com';
+let _calendlyOrgUri = null;
+let _calendlyCache = {};
+const CALENDLY_CACHE_TTL = 60 * 60 * 1000;
+
+async function calendlyFetch(path) {
+  const url = path.startsWith('http') ? path : `${CALENDLY_BASE}${path}`;
+  const r = await fetch(url, {
+    headers: { Authorization: `Bearer ${CALENDLY_TOKEN}`, 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!r.ok) {
+    const err = await r.text();
+    throw Object.assign(new Error(`Calendly ${r.status}`), { status: r.status, body: err });
+  }
+  return r.json();
+}
+
+async function getOrgUri() {
+  if (_calendlyOrgUri) return _calendlyOrgUri;
+  const data = await calendlyFetch('/users/me');
+  _calendlyOrgUri = data.resource.current_organization;
+  return _calendlyOrgUri;
+}
+
+async function fetchAllEvents(orgUri, minStart, maxStart) {
+  const events = [];
+  let pageToken = null;
+  do {
+    const params = new URLSearchParams({
+      organization: orgUri,
+      min_start_time: minStart,
+      max_start_time: maxStart,
+      status: 'active',
+      count: '100',
+    });
+    if (pageToken) params.set('page_token', pageToken);
+    const data = await calendlyFetch(`/scheduled_events?${params}`);
+    events.push(...(data.collection || []));
+    pageToken = data.pagination?.next_page_token || null;
+  } while (pageToken);
+  return events;
+}
+
+function aggregateEvents(events, mode) {
+  const periods = {};
+  const byType = {};
+
+  events.forEach(ev => {
+    const d = new Date(ev.start_time);
+
+    let key, label;
+    if (mode === 'monthly') {
+      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      label = d.toLocaleDateString('it-IT', { month: 'short', year: '2-digit' });
+    } else {
+      const day = d.getDay();
+      const diff = (day === 0 ? -6 : 1 - day);
+      const monday = new Date(d);
+      monday.setDate(d.getDate() + diff);
+      monday.setHours(0, 0, 0, 0);
+      key = monday.toISOString().slice(0, 10);
+      label = monday.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+    }
+
+    if (!periods[key]) periods[key] = { label, count: 0, sortKey: key };
+    periods[key].count++;
+
+    const type = ev.name || 'Altro';
+    byType[type] = (byType[type] || 0) + 1;
+  });
+
+  const sortedPeriods = Object.values(periods).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  const sortedByType = Object.entries(byType)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { periods: sortedPeriods, byType: sortedByType };
+}
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -32,6 +113,56 @@ app.get('/api/data', async (req, res) => {
     console.error('Errore fetch Apps Script:', err.message);
     if (_dataCache.body) return res.json(_dataCache.body);
     res.status(502).json({ error: 'Apps Script non raggiungibile' });
+  }
+});
+
+// ── GET /api/calendly ─────────────────────────────────────────────────────
+app.get('/api/calendly', async (req, res) => {
+  if (!CALENDLY_TOKEN) {
+    return res.status(503).json({ error: 'CALENDLY_TOKEN non configurato' });
+  }
+
+  const force = req.query.force === '1';
+  const mode = req.query.mode || 'weekly';
+  const now = new Date();
+
+  let minStart, maxStart;
+  if (req.query.from && req.query.to) {
+    minStart = new Date(req.query.from).toISOString();
+    maxStart = new Date(req.query.to + 'T23:59:59').toISOString();
+  } else if (mode === 'monthly') {
+    const from = new Date(now);
+    from.setDate(now.getDate() - 365);
+    minStart = from.toISOString();
+    maxStart = now.toISOString();
+  } else {
+    const from = new Date(now);
+    from.setDate(now.getDate() - 90);
+    minStart = from.toISOString();
+    maxStart = now.toISOString();
+  }
+
+  const cacheKey = `${mode}|${minStart}|${maxStart}`;
+  if (!force && _calendlyCache[cacheKey] && Date.now() - _calendlyCache[cacheKey].ts < CALENDLY_CACHE_TTL) {
+    return res.json(_calendlyCache[cacheKey].data);
+  }
+
+  try {
+    const orgUri = await getOrgUri();
+    const events = await fetchAllEvents(orgUri, minStart, maxStart);
+    const { periods, byType } = aggregateEvents(events, mode);
+
+    const weekAgo = new Date(now);
+    weekAgo.setDate(now.getDate() - 7);
+    const thisWeek = events.filter(ev => new Date(ev.start_time) >= weekAgo).length;
+
+    const responseData = { periods, byType, total: events.length, thisWeek };
+    _calendlyCache[cacheKey] = { ts: Date.now(), data: responseData };
+    res.json(responseData);
+  } catch (err) {
+    console.error('Errore Calendly:', err.message);
+    if (err.status === 401) return res.status(401).json({ error: 'Token Calendly non valido' });
+    res.status(502).json({ error: 'Calendly non raggiungibile' });
   }
 });
 
