@@ -39,20 +39,19 @@ function getUserUri() {
 
 async function fetchAllEvents(userUri, minStart, maxStart) {
   const events = [];
-  let pageToken = null;
+  const firstParams = new URLSearchParams({
+    user: userUri,
+    min_start_time: minStart,
+    max_start_time: maxStart,
+    status: 'active',
+    count: '100',
+  });
+  let url = `/scheduled_events?${firstParams}`;
   do {
-    const params = new URLSearchParams({
-      user: userUri,
-      min_start_time: minStart,
-      max_start_time: maxStart,
-      status: 'active',
-      count: '100',
-    });
-    if (pageToken) params.set('page_token', pageToken);
-    const data = await calendlyFetch(`/scheduled_events?${params}`);
+    const data = await calendlyFetch(url);
     events.push(...(data.collection || []));
-    pageToken = data.pagination?.next_page_token || null;
-  } while (pageToken);
+    url = data.pagination?.next_page || null;
+  } while (url);
   return events;
 }
 
