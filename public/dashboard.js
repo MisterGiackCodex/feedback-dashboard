@@ -159,6 +159,26 @@ function getAggregatedData(rows, mode, fromTs, toTs) {
     });
   }
 
+  if (mode === 'daily') {
+    const days = {};
+    filtered.forEach(r => {
+      const d = new Date(parseTs(r[COL.data]));
+      const key = d.toISOString().slice(0, 10);
+      if (!days[key]) days[key] = { rows: [], start: new Date(key).getTime() };
+      days[key].rows.push(r);
+    });
+
+    return Object.entries(days).sort((a, b) => a[1].start - b[1].start).map(([, m]) => {
+      const avgSodd = m.rows.map(r => parseFloat(r[COL.soddisfazione])).filter(v => !isNaN(v) && v > 0);
+      return {
+        start: m.start,
+        label: new Date(m.start).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }),
+        count: m.rows.length,
+        avgSatisfaction: avgSodd.length ? avgSodd.reduce((a, b) => a + b, 0) / avgSodd.length : 0,
+      };
+    });
+  }
+
   // Weekly (default)
   const MS_WEEK = 7 * 86400000;
   const startTs2 = parseTs(filtered[0][COL.data]);
@@ -217,6 +237,7 @@ function refreshTrend() {
   const data = getAggregatedData(_currentRows, _trendMode, _customFrom, _customTo);
   const titleEl = document.getElementById('trend-title');
   if (_trendMode === 'monthly') titleEl.textContent = 'Trend Soddisfazione (media mensile)';
+  else if (_trendMode === 'daily') titleEl.textContent = 'Trend Soddisfazione (media giornaliera)';
   else if (_trendMode === 'custom') titleEl.textContent = 'Trend Soddisfazione (periodo personalizzato)';
   else titleEl.textContent = 'Trend Soddisfazione (media settimanale)';
   requestAnimationFrame(() => drawTrendChart('trend-chart', data));
@@ -1020,6 +1041,7 @@ async function loadCalendly(mode, from, to, force) {
 
   const titleEl = document.getElementById('calendly-title');
   if (mode === 'monthly') titleEl.textContent = 'Riunioni Calendly (mensile)';
+  else if (mode === 'daily') titleEl.textContent = 'Riunioni Calendly (giornaliero — ultimi 30gg)';
   else if (mode === 'custom') titleEl.textContent = 'Riunioni Calendly (periodo personalizzato)';
   else titleEl.textContent = 'Riunioni Calendly (settimanale)';
 

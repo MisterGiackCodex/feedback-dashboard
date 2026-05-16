@@ -66,6 +66,9 @@ function aggregateEvents(events, mode) {
     if (mode === 'monthly') {
       key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       label = d.toLocaleDateString('it-IT', { month: 'short', year: '2-digit' });
+    } else if (mode === 'daily') {
+      key = d.toISOString().slice(0, 10);
+      label = d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
     } else {
       const day = d.getDay();
       const diff = (day === 0 ? -6 : 1 - day);
@@ -136,6 +139,11 @@ app.get('/api/calendly', async (req, res) => {
   } else if (mode === 'monthly') {
     const from = new Date(now);
     from.setDate(now.getDate() - 365);
+    minStart = from.toISOString();
+    maxStart = now.toISOString();
+  } else if (mode === 'daily') {
+    const from = new Date(now);
+    from.setDate(now.getDate() - 30);
     minStart = from.toISOString();
     maxStart = now.toISOString();
   } else {
