@@ -26,19 +26,23 @@ async function calendlyFetch(path) {
   return r.json();
 }
 
-async function getOrgUri() {
+function getUserUri() {
   if (_calendlyOrgUri) return _calendlyOrgUri;
-  const data = await calendlyFetch('/users/me');
-  _calendlyOrgUri = data.resource.current_organization;
-  return _calendlyOrgUri;
+  try {
+    const payload = JSON.parse(Buffer.from(CALENDLY_TOKEN.split('.')[1], 'base64url').toString());
+    _calendlyOrgUri = `${CALENDLY_BASE}/users/${payload.user_uuid}`;
+    return _calendlyOrgUri;
+  } catch {
+    throw Object.assign(new Error('Token Calendly non valido o malformato'), { status: 401 });
+  }
 }
 
-async function fetchAllEvents(orgUri, minStart, maxStart) {
+async function fetchAllEvents(userUri, minStart, maxStart) {
   const events = [];
   let pageToken = null;
   do {
     const params = new URLSearchParams({
-      organization: orgUri,
+      user: userUri,
       min_start_time: minStart,
       max_start_time: maxStart,
       status: 'active',
@@ -148,8 +152,8 @@ app.get('/api/calendly', async (req, res) => {
   }
 
   try {
-    const orgUri = await getOrgUri();
-    const events = await fetchAllEvents(orgUri, minStart, maxStart);
+    const userUri = getUserUri();
+    const events = await fetchAllEvents(userUri, minStart, maxStart);
     const { periods, byType } = aggregateEvents(events, mode);
 
     const weekAgo = new Date(now);
