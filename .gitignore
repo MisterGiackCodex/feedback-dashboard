@@ -3,3 +3,9 @@ node_modules/
 .env
 .env.*
 .DS_Store
+
+# ruflo/superpowers residues
+ruvector.db
+.swarm/
+.superpowers/
+.claude-flow/
